@@ -56,17 +56,17 @@ CREATE TABLE settings (
 
 -- Table: jokes
 CREATE TABLE jokes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,     -- Unique ID for each joke
-    add_by INTEGER NOT NULL,                  -- User ID of the person who added the joke
-    language_code TEXT NOT NULL DEFAULT 'en', -- Language of the joke
-    content TEXT NOT NULL,                    -- The joke text
-    status TEXT NOT NULL DEFAULT 'published', -- Lifecycle status: 'draft', 'published', 'archived'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the joke was added
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the joke was last updated
-    deleted_at TIMESTAMP DEFAULT NULL,        -- Soft deletion timestamp
-    FOREIGN KEY (add_by) REFERENCES users(id),-- Ensure the joke is linked to a valid user
+    id INTEGER PRIMARY KEY AUTOINCREMENT,               -- Unique ID for each joke
+    add_by INTEGER NOT NULL,                            -- User ID of the person who added the joke
+    language_code TEXT NOT NULL DEFAULT 'en',           -- Language of the joke
+    content TEXT NOT NULL,                              -- The joke text
+    status TEXT NOT NULL DEFAULT 'pending',           -- Lifecycle status: 'draft', 'published', 'archived'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,     -- Timestamp when the joke was added
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,     -- Timestamp when the joke was last updated
+    deleted_at TIMESTAMP DEFAULT NULL,                  -- Soft deletion timestamp
+    FOREIGN KEY (add_by) REFERENCES users(id),          -- Ensure the joke is linked to a valid user
     FOREIGN KEY (language_code) REFERENCES languages(code), -- Ensure the language exists
-    CHECK(LENGTH(content) <= 500)             -- Optional: Enforce a maximum joke length
+    UNIQUE(content)                                    -- Ensure joke content is unique
 );
 
 -- Table: reactions
@@ -103,20 +103,24 @@ CREATE TABLE tags (
 );
 
 -- Table: joke_tags
+DROP TABLE IF EXISTS joke_tags;
+
 CREATE TABLE joke_tags (
-    joke_id INTEGER NOT NULL PRIMARY KEY,     -- Each joke can have only one tag
-    tag_id INTEGER NOT NULL,                  -- Tag associated with the joke
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    joke_id INTEGER NOT NULL,                  -- Joke associated with the tag
+    tag_id INTEGER NOT NULL,                   -- Tag associated with the joke
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the association was added
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the association was last updated
     FOREIGN KEY (joke_id) REFERENCES jokes(id), -- Ensure the joke exists
-    FOREIGN KEY (tag_id) REFERENCES tags(id)   -- Ensure the tag exists
+    FOREIGN KEY (tag_id) REFERENCES tags(id),   -- Ensure the tag exists
+    UNIQUE(joke_id, tag_id)                    -- Prevent duplicate joke-tag associations
 );
 
 -- Table: preferred_tags
 CREATE TABLE preferred_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,     -- Unique ID for each record
     chat_id INTEGER NOT NULL,                 -- Chat that prefers the tag
-    tag_id INTEGER NOT NULL,                  -- Tag that the chat prefers
+ag_id) RE    tag_id INTEGER NOT NULL,                  -- Tag that the chat prefers
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the preference was added
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the preference was last updated
     FOREIGN KEY (chat_id) REFERENCES chats(id), -- Ensure the chat exists

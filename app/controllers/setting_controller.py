@@ -1,6 +1,11 @@
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler
+from telegram.ext import (
+    ContextTypes,
+    ConversationHandler,
+    CommandHandler,
+    CallbackQueryHandler,
+)
 from app.controllers.controller import Controller
 from app.db.db_manager import DBManager
 from app.db.entities.setting import Setting
@@ -9,10 +14,11 @@ from app.db.entities.tag import Tag
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
 
 class SettingController(Controller):
     """
@@ -28,18 +34,22 @@ class SettingController(Controller):
         Displays the current settings for the chat and provides buttons to edit them.
         """
         if not await self.is_user_admin_or_owner(update, context):
-            await update.message.reply_text("You are not authorized to change the bot settings. only admins or owners can do this.")
+            await update.message.reply_text(
+                "You are not authorized to change the bot settings. only admins or owners can do this."
+            )
             return
 
         # Get the chat object
-        chat = await self.get_chat(update=update, context=context)
+        chat = self.get_chat(update=update, context=context)
         if not chat:
             return  # Exit if chat retrieval fails
 
         setting = Setting(chat_id=chat.id)
         setting.load()  # Load the latest settings from the database
         if not setting.is_exists():
-            await self.send_error_message(update, "Failed to load settings for this chat.")
+            await self.send_error_message(
+                update, "Failed to load settings for this chat."
+            )
             return
 
         # Format the settings into a readable message
@@ -54,13 +64,32 @@ class SettingController(Controller):
 
         # Create an inline keyboard for editing settings
         keyboard = [
-            [InlineKeyboardButton("Change Preferred Language", callback_data="edit_preferred_language")],
-            [InlineKeyboardButton("Set Joke-Sending Schedule", callback_data="edit_schedule")],
-            [InlineKeyboardButton("Toggle Delete Last Joke", callback_data="toggle_delete_last_joke")],
-            [InlineKeyboardButton("Manage Preferred Tags", callback_data="manage_preferred_tags")],
-            [InlineKeyboardButton("Reset Settings to Default", callback_data="reset_settings")],
-    
-            [InlineKeyboardButton("Close", callback_data="close_settings")]
+            [
+                InlineKeyboardButton(
+                    "Change Preferred Language", callback_data="edit_preferred_language"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "Set Joke-Sending Schedule", callback_data="edit_schedule"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "Toggle Delete Last Joke", callback_data="toggle_delete_last_joke"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "Manage Preferred Tags", callback_data="manage_preferred_tags"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "Reset Settings to Default", callback_data="reset_settings"
+                )
+            ],
+            [InlineKeyboardButton("Close", callback_data="close_settings")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -68,14 +97,18 @@ class SettingController(Controller):
         if update.message:
             await update.message.reply_text(settings_message, reply_markup=reply_markup)
         elif update.callback_query:
-            await update.callback_query.edit_message_text(settings_message, reply_markup=reply_markup)
+            await update.callback_query.edit_message_text(
+                settings_message, reply_markup=reply_markup
+            )
 
     async def handle_callback_query(self, update, context):
         """
         Handles callback queries for editing settings.
         """
         if not await self.is_user_admin_or_owner(update, context):
-            await update.message.reply_text("You are not authorized to change the bot Settings. only admins or owners can do this.")
+            await update.message.reply_text(
+                "You are not authorized to change the bot Settings. only admins or owners can do this."
+            )
             return
 
         query = update.callback_query
@@ -91,7 +124,9 @@ class SettingController(Controller):
             await self.send_error_message(update, "Settings not found for this chat.")
             return
 
-        logger.info(f"Chat ID: {chat_id}, Setting: {setting}, Data: {query.data if query else 'Unknown'}")
+        logger.info(
+            f"Chat ID: {chat_id}, Setting: {setting}, Data: {query.data if query else 'Unknown'}"
+        )
 
         # Handle specific callback actions
         if query:
@@ -100,7 +135,9 @@ class SettingController(Controller):
             elif query.data == "edit_schedule":
                 await self._edit_schedule(update, setting)
             elif query.data.startswith("set_schedule_"):
-                await self._set_schedule(setting=setting, update=update, context=context)   
+                await self._set_schedule(
+                    setting=setting, update=update, context=context
+                )
             elif query.data.startswith("set_language_"):
                 await self._set_preferred_language(update, setting)
             elif query.data == "toggle_delete_last_joke":
@@ -108,13 +145,21 @@ class SettingController(Controller):
             elif query.data == "toggle_delete_last_joke_yes":
                 setting.delete_last_joke = "yes"
                 setting.save()
-                await query.edit_message_text("Delete last joke setting updated to: ✅ Yes")
-                await self.handle_settings_command(update, context)  # Return to the main settings menu:
+                await query.edit_message_text(
+                    "Delete last joke setting updated to: ✅ Yes"
+                )
+                await self.handle_settings_command(
+                    update, context
+                )  # Return to the main settings menu:
             elif query.data == "toggle_delete_last_joke_no":
                 setting.delete_last_joke = "no"
                 setting.save()
-                await query.edit_message_text("Delete last joke setting updated to: ❌ No")
-                await self.handle_settings_command(update, context)  # Return to the main settings menu:    
+                await query.edit_message_text(
+                    "Delete last joke setting updated to: ❌ No"
+                )
+                await self.handle_settings_command(
+                    update, context
+                )  # Return to the main settings menu:
             elif query.data == "manage_preferred_tags":
                 await self._manage_preferred_tags(update, setting)
             elif query.data.startswith("add_tag_"):
@@ -130,7 +175,7 @@ class SettingController(Controller):
             elif query.data.startswith("react_"):
                 await self.react_to_joke(update, context)
             else:
-                await query.answer("Unknown action. Please try again.") 
+                await query.answer("Unknown action. Please try again.")
 
     async def _edit_preferred_language(self, update, setting):
         """
@@ -138,20 +183,32 @@ class SettingController(Controller):
         """
         languages = self.db.fetch_all("SELECT code, name FROM languages")
         if not languages:
-            await self.send_error_message(update, "No languages available in the database.")
+            await self.send_error_message(
+                update, "No languages available in the database."
+            )
             return
 
         keyboard = [
             [InlineKeyboardButton(name, callback_data=f"set_language_{code}")]
             for code, name in languages
         ]
-        keyboard.append([InlineKeyboardButton("Return to Settings", callback_data="return_to_settings")])
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    "Return to Settings", callback_data="return_to_settings"
+                )
+            ]
+        )
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         if update.callback_query:
-            await update.callback_query.edit_message_text("Select your preferred language:", reply_markup=reply_markup)
+            await update.callback_query.edit_message_text(
+                "Select your preferred language:", reply_markup=reply_markup
+            )
         else:
-            await update.message.reply_text("Select your preferred language:", reply_markup=reply_markup)
+            await update.message.reply_text(
+                "Select your preferred language:", reply_markup=reply_markup
+            )
 
     async def _set_preferred_language(self, update, setting):
         """
@@ -160,15 +217,21 @@ class SettingController(Controller):
         query = update.callback_query
         data_parts = query.data.split("_")
         if len(data_parts) < 3:
-            await query.edit_message_text("Invalid language selection. Please try again.")
+            await query.edit_message_text(
+                "Invalid language selection. Please try again."
+            )
             return
 
         new_language_code = data_parts[-1]
         setting.preferred_language = new_language_code
         setting.save()
 
-        await query.edit_message_text(f"Preferred language updated to: {new_language_code}")
-        await self.handle_settings_command(update, None)  # Return to the main settings menu
+        await query.edit_message_text(
+            f"Preferred language updated to: {new_language_code}"
+        )
+        await self.handle_settings_command(
+            update, None
+        )  # Return to the main settings menu
 
     async def _edit_schedule(self, update, setting):
         """
@@ -178,23 +241,32 @@ class SettingController(Controller):
         # Create the keyboard with 3 buttons per row
         keyboard = [
             [
-                InlineKeyboardButton(f"{i} Minutes", callback_data=f"set_schedule_{i * 60}")
-                for i in intervals[j:j + 3]  # Group buttons in sets of 3
+                InlineKeyboardButton(
+                    f"{i} Minutes", callback_data=f"set_schedule_{i * 60}"
+                )
+                for i in intervals[j : j + 3]  # Group buttons in sets of 3
             ]
             for j in range(0, len(intervals), 3)
-        ]      
-        keyboard.append([InlineKeyboardButton("Return to Settings", callback_data="return_to_settings")])
+        ]
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    "Return to Settings", callback_data="return_to_settings"
+                )
+            ]
+        )
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         if update.callback_query:
-            await update.callback_query.edit_message_text("Set Joke-Sending Schedule:", reply_markup=reply_markup)
+            await update.callback_query.edit_message_text(
+                "Set Joke-Sending Schedule:", reply_markup=reply_markup
+            )
         else:
-            await update.message.reply_text("Set Joke-Sending Schedule:", reply_markup=reply_markup)
+            await update.message.reply_text(
+                "Set Joke-Sending Schedule:", reply_markup=reply_markup
+            )
 
-
-
-
-    async def _set_schedule(self, setting,  update, context): 
+    async def _set_schedule(self, setting, update, context):
         """
         Updates the joke-sending schedule in the database.
         """
@@ -206,24 +278,22 @@ class SettingController(Controller):
 
         new_schedule = int(data_parts[-1])
         if new_schedule <= 0:
-            await query.edit_message_text("Schedule must be a positive number. Please try again.")
+            await query.edit_message_text(
+                "Schedule must be a positive number. Please try again."
+            )
             return
 
         setting.schedule = new_schedule
         setting.save()
 
-        message = f"Joke-sending schedule updated to: {int(int(setting.schedule)/60)} minutes"
-        await self.handle_settings_command(update, context=context)  # Return to the main settings menu
+        message = (
+            f"Joke-sending schedule updated to: {int(int(setting.schedule)/60)} minutes"
+        )
+        await self.handle_settings_command(
+            update, context=context
+        )  # Return to the main settings menu
         await query.answer(message)
         logger.info(message)
-
-    
-
-    
-
-
-    
-
 
     async def _toggle_setting(self, update, setting, setting_name):
         """
@@ -236,7 +306,9 @@ class SettingController(Controller):
 
         current_value = getattr(setting, setting_name, None)
         if current_value is None:
-            await self.send_error_message(update, f"Setting '{setting_name}' not found.")
+            await self.send_error_message(
+                update, f"Setting '{setting_name}' not found."
+            )
             return
 
         new_value = "on" if current_value == "off" else "off"
@@ -244,8 +316,12 @@ class SettingController(Controller):
         setting.save()
 
         query = update.callback_query
-        await query.edit_message_text(f"{setting_name.replace('_', ' ').title()} toggled to: {new_value}")
-        await self.handle_settings_command(update, None)  # Return to the main settings menu
+        await query.edit_message_text(
+            f"{setting_name.replace('_', ' ').title()} toggled to: {new_value}"
+        )
+        await self.handle_settings_command(
+            update, None
+        )  # Return to the main settings menu
 
     async def _manage_preferred_tags(self, update, setting):
         """
@@ -283,18 +359,26 @@ class SettingController(Controller):
             keyboard.append(row)
 
         # Add the "Return to Settings" button as a separate row
-        keyboard.append([InlineKeyboardButton("↩️ Return to Settings", callback_data="return_to_settings")])
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    "↩️ Return to Settings", callback_data="return_to_settings"
+                )
+            ]
+        )
 
         # Create the reply markup
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         # Send or edit the message with the inline keyboard
         if update.callback_query:
-            await update.callback_query.edit_message_text("Manage Preferred Tags:", reply_markup=reply_markup)
+            await update.callback_query.edit_message_text(
+                "Manage Preferred Tags:", reply_markup=reply_markup
+            )
         else:
-            await update.message.reply_text("Manage Preferred Tags:", reply_markup=reply_markup)
-        
-
+            await update.message.reply_text(
+                "Manage Preferred Tags:", reply_markup=reply_markup
+            )
 
     async def _add_preferred_tag(self, update, setting):
         """
@@ -310,7 +394,9 @@ class SettingController(Controller):
         setting.add_preferred_tag(tag_id)
 
         await query.edit_message_text("Tag added to preferred tags.")
-        await self._manage_preferred_tags(update, setting)  # Refresh the tag management menu
+        await self._manage_preferred_tags(
+            update, setting
+        )  # Refresh the tag management menu
 
     async def _remove_preferred_tag(self, update, setting):
         """
@@ -326,7 +412,9 @@ class SettingController(Controller):
         setting.remove_preferred_tag(tag_id)
 
         await query.edit_message_text("Tag removed from preferred tags.")
-        await self._manage_preferred_tags(update, setting)  # Refresh the tag management menu
+        await self._manage_preferred_tags(
+            update, setting
+        )  # Refresh the tag management menu
 
     async def _reset_settings(self, update, setting):
         """
@@ -335,18 +423,23 @@ class SettingController(Controller):
         setting.reset_settings()
 
         query = update.callback_query
-        await query.edit_message_text("All settings have been reset to their default values.")
-        await self.handle_settings_command(update, None)  # Return to the main settings menu
+        await query.edit_message_text(
+            "All settings have been reset to their default values."
+        )
+        await self.handle_settings_command(
+            update, None
+        )  # Return to the main settings menu
 
-    
     async def _edit_toggle_delete_last_joke(self, update, context):
         """
         Displays an inline keyboard to toggle the 'delete_last_joke' setting.
         """
         # Get the chat object and load the latest settings
-        chat = await self.get_chat(update=update, context=context)
+        chat = self.get_chat(update=update, context=context)
         if not chat:
-            await self.send_error_message(update, "Failed to retrieve chat information.")
+            await self.send_error_message(
+                update, "Failed to retrieve chat information."
+            )
             return
 
         setting = Setting(chat_id=chat.id)
@@ -363,14 +456,18 @@ class SettingController(Controller):
             [
                 InlineKeyboardButton(
                     "Yes ✅" if current_state == "no" else "Yes",
-                    callback_data="toggle_delete_last_joke_yes"
+                    callback_data="toggle_delete_last_joke_yes",
                 ),
                 InlineKeyboardButton(
                     "No ❌" if current_state == "yes" else "No",
-                    callback_data="toggle_delete_last_joke_no"
+                    callback_data="toggle_delete_last_joke_no",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "Return to Settings", callback_data="return_to_settings"
                 )
             ],
-            [InlineKeyboardButton("Return to Settings", callback_data="return_to_settings")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -383,11 +480,14 @@ class SettingController(Controller):
         # Send or edit the message with the inline keyboard
         if update.callback_query:
             await update.callback_query.edit_message_text(
-                message_text,
-                reply_markup=reply_markup
+                message_text, reply_markup=reply_markup
             )
         elif update.message:
-            await update.message.reply_text(
-                message_text,
-                reply_markup=reply_markup
-            )   
+            await update.message.reply_text(message_text, reply_markup=reply_markup)
+
+    def setup_handler(self):
+        self.application.add_handler(
+            CommandHandler("settings", self.handle_settings_command)
+        )
+
+        self.application.add_handler(CallbackQueryHandler(self.handle_callback_query))

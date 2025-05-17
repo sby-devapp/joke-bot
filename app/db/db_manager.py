@@ -6,8 +6,8 @@ import logging
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(name)s - %(funcName)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]  # Logs will be printed to the console
+    format="%(name)s - %(funcName)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],  # Logs will be printed to the console
 )
 logger = logging.getLogger(__name__)
 
@@ -19,16 +19,13 @@ class QueryBuilder:
 
     def __init__(self, table_name):
         self.table_name = table_name
-        self.query_parts = {
-            "select": "*",
-            "where": None,
-            "order": None,
-            "limit": None
-        }
+        self.query_parts = {"select": "*", "where": None, "order": None, "limit": None}
 
     def select(self, columns="*"):
         """Specify the columns to select."""
-        self.query_parts["select"] = ", ".join(columns) if isinstance(columns, list) else columns
+        self.query_parts["select"] = (
+            ", ".join(columns) if isinstance(columns, list) else columns
+        )
         return self
 
     def where(self, condition):
@@ -91,7 +88,7 @@ class DBManager:
         if self.connection:
             self.connection.close()
             self.connection = None
-            #logger.info("Database connection closed.")
+            # logger.info("Database connection closed.")
 
     def execute(self, query, params=None):
         """
@@ -105,10 +102,10 @@ class DBManager:
             cursor = self.connection.cursor()
             cursor.execute(query, params or ())
             self.connection.commit()
-            #logger.info(f"Executed query: {query}")
+            # logger.info(f"Executed query: {query}")
             return cursor
         except sqlite3.Error as e:
-            #logger.error(f"Query execution failed: {e}")
+            # logger.error(f"Query execution failed: {e}")
             raise
 
     def fetch_all(self, query, params=None):
@@ -143,15 +140,13 @@ class DBManager:
             cursor.executescript(sql_script)  # Executes multiple SQL statements
             self.connection.commit()  # Commit the transaction
 
-            #logger.info(f"Executed SQL script from {file_path}")
+            # logger.info(f"Executed SQL script from {file_path}")
         except sqlite3.Error as e:
-            #logger.error(f"Failed to execute SQL file: {e}")
+            # logger.error(f"Failed to execute SQL file: {e}")
             self.connection.rollback()  # Rollback in case of an error
             raise
         finally:
             cursor.close()  # Ensure the cursor is closed
-
-            
 
     def export(self, sql_file_path):
         """
@@ -161,7 +156,7 @@ class DBManager:
             with open(sql_file_path, "w") as file:
                 for line in self.connection.iterdump():
                     file.write(f"{line}\n")
-            #logger.info(f"Database exported to {sql_file_path}")
+            # logger.info(f"Database exported to {sql_file_path}")
         except Exception as e:
-            #logger.error(f"Failed to export database: {e}")
+            # logger.error(f"Failed to export database: {e}")
             raise

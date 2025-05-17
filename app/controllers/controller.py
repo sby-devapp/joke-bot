@@ -12,8 +12,8 @@ from anyio import current_time
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -23,17 +23,19 @@ class Controller:
     Base controller class providing shared functionality for managing chats, users, and settings.
     """
 
+    application = None
+
     def __init__(self):
         logger.info("Initializing Controller...")
 
-    async def get_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> Chat:
+    def get_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> Chat:
         """
         Retrieves or creates a Chat object for the given chat_id.
         Ensures the associated User and Setting objects are properly initialized.
         Returns the Chat object.
         """
         try:
-            user = await self.get_user(update=update, context=context)
+            user = self.get_user(update=update, context=context)
             if not user:
                 logger.error("Failed to retrieve or create user.")
                 return None
@@ -55,13 +57,15 @@ class Controller:
             chat.save()
             chat.load()
 
-            logger.info(f"Retrieved or created chat: Chat ID: {chat.id}, Username: {chat.username}")
+            logger.info(
+                f"Retrieved or created chat: Chat ID: {chat.id}, Username: {chat.username}"
+            )
             return chat
         except Exception as e:
             logger.error(f"Error while retrieving or creating chat: {e}")
             return None
 
-    async def get_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> User:
+    def get_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> User:
         """
         Retrieves or creates a user object based on the update.
         Handles both Message and CallbackQuery updates.
@@ -87,7 +91,9 @@ class Controller:
 
             # Save the user to the database
             user.save()
-            logger.info(f"Retrieved or created user: User ID: {user.id}, Username: {user.username}")
+            logger.info(
+                f"Retrieved or created user: User ID: {user.id}, Username: {user.username}"
+            )
             return user
         except Exception as e:
             logger.error(f"Error while retrieving or creating user: {e}")
@@ -115,7 +121,9 @@ class Controller:
             logger.info(f"Sent welcome message to chat ID {chat.id}")
         except Exception as e:
             logger.error(f"Error while handling /start command: {e}")
-            await self.send_error_message(update, "Oops! Something went wrong. Please try again later.")
+            await self.send_error_message(
+                update, "Oops! Something went wrong. Please try again later."
+            )
 
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -123,7 +131,7 @@ class Controller:
         Displays a list of available commands and their descriptions.
         """
         try:
-            chat = await self.get_chat(update=update, context=context)
+            chat = self.get_chat(update=update, context=context)
             if not chat:
                 await self.send_error_message(update, "Failed to initialize chat.")
                 return
@@ -133,17 +141,20 @@ class Controller:
                 "Here’s a list of available commands and what they do:\n"
                 "- /start - Initializes the bot and displays a welcome message.\n"
                 "- /joke - Sends a random joke to the chat.\n"
+                "- /jokes - Displays all of your jokes.\n"
                 "- /addjoke - Allows you to submit a new joke for others to enjoy (coming soon!).\n"
                 "- /settings - Opens the settings menu to manage your preferences.\n"
                 "- /stop - Stops the bot from sending jokes to this chat.\n\n"
-                "For more information, feel free to ask!"
+                "For more information, feel free to ask! @groot_n"
             )
 
             await update.message.reply_text(message)
             logger.info(f"Sent help message to chat ID {chat.id}")
         except Exception as e:
             logger.error(f"Error while handling /help command: {e}")
-            await self.send_error_message(update, "Oops! Something went wrong. Please try again later.")
+            await self.send_error_message(
+                update, "Oops! Something went wrong. Please try again later."
+            )
 
     async def send_error_message(self, update: Update, message: str):
         """
@@ -165,23 +176,28 @@ class Controller:
         Updates the chat with the new message ID and timestamp.
         """
         current_time = int(asyncio.get_event_loop().time())
-        try:
-            joke_view = JokeView(joke=joke)
+        joke_view = JokeView(joke=joke)
 
-            # Delete the last message if required
-            if chat.setting.delete_last_joke == 'yes' and chat.last_message_id:
-                try:
-                    await context.bot.delete_message(chat_id=chat.id, message_id=chat.last_message_id)
-                    logger.info(f"Deleted last message with ID {chat.last_message_id} in chat ID {chat.id}")
-                except Exception as e:
-                    logger.error(f"Failed to delete last message: {e}")
-                    chat.last_message_id = None  # Reset last_message_id if deletion fails
+        # Delete the last message if required
+        if chat.setting.delete_last_joke == "yes" and chat.last_message_id:
+            try:
+                await context.bot.delete_message(
+                    chat_id=chat.id, message_id=chat.last_message_id
+                )
+                logger.info(
+                    f"Deleted last message with ID {chat.last_message_id} in chat ID {chat.id}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to delete last message: {e}")
+                chat.last_message_id = None  # Reset last_message_id if deletion fails
+
+        try:
 
             # Send the joke message with the inline keyboard
             message = await context.bot.send_message(
                 chat_id=chat.id,
                 text=joke_view.format_private_chat(),
-                reply_markup=joke_view.get_reaction_keyboard()
+                reply_markup=joke_view.get_reaction_keyboard(),
             )
 
             # Update the chat with the new message ID and timestamp
@@ -229,8 +245,9 @@ class Controller:
             logger.error(f"Error while updating keyboard: {e}")
             await query.answer("Failed to update the keyboard. Please try again.")
 
-
-    async def is_user_admin_or_owner(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    async def is_user_admin_or_owner(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> bool:
         """
         Verifies if the user issuing the command/callback query is the owner or an admin in a group chat.
         In private chats, any user is allowed to execute commands.
@@ -248,20 +265,22 @@ class Controller:
             chat_id = update.effective_chat.id
 
             # Fetch the user's status in the chat
-            chat_member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            chat_member = await context.bot.get_chat_member(
+                chat_id=chat_id, user_id=user_id
+            )
 
             # Check if the user is an admin or owner
-            if chat_member.status == 'administrator' or chat_member.status == 'creator':
-                return True # User is an admin or owner 
+            if chat_member.status == "administrator" or chat_member.status == "creator":
+                return True  # User is an admin or owner
 
             # If the user is not an admin or owner, deny access
-            logger.warning(f"User {user_id} attempted to execute a restricted command in chat {chat_id}.")
+            logger.warning(
+                f"User {user_id} attempted to execute a restricted command in chat {chat_id}."
+            )
             return False
         except Exception as e:
             logger.error(f"Error while verifying user permissions: {e}")
             return False
-
-
 
     async def user_profile(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -271,8 +290,9 @@ class Controller:
             user = update.effective_user
             chat = update.effective_chat
 
-            chat_member = await context.bot.get_chat_member(chat_id=chat.id, user_id=user.id)
-            
+            chat_member = await context.bot.get_chat_member(
+                chat_id=chat.id, user_id=user.id
+            )
 
             # Construct the profile message
             message = (
@@ -288,6 +308,20 @@ class Controller:
             logger.info(f"{message}")
         except Exception as e:
             logger.error(f"Error while displaying user profile: {e}")
-            await update.message.reply_text("Failed to retrieve profile information. Please try again.")
+            await update.message.reply_text(
+                "Failed to retrieve profile information. Please try again."
+            )
 
-
+    async def is_private_chat(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> bool:
+        """
+        Checks if the chat is a private chat.
+        Returns True if it is a private chat, False otherwise.
+        """
+        try:
+            chat_type = update.effective_chat.type
+            return chat_type == "private"
+        except Exception as e:
+            logger.error(f"Error while checking chat type: {e}")
+            return False
