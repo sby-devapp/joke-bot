@@ -56,11 +56,11 @@ def main():
         if choice == "1":
             create_database_schema()
         elif choice == "2":
-            sql_file = "database/tags.sql"
+            sql_file = "database/db.tags.sql"
             if sql_syntax_correct(sql_file):
                 print("Tags initialized successfully.")
         elif choice == "3":
-            sql_file = "database/languages.sql"
+            sql_file = "database/db.languages.sql"
             if sql_syntax_correct(sql_file):
                 print("Languages initialized successfully.")
         elif choice == "4":

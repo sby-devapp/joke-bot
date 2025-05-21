@@ -32,3 +32,6 @@ Thumbs.db
 
 .env
 token.config
+test*
+database.db
+*.sqlite
