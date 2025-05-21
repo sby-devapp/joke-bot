@@ -8,26 +8,8 @@ import sys
 SCHEMA_FILE = "database/schema.sql"
 
 
-def create_database_schema():
-    db_manager = DBManager()
-    db_manager.execute_sql_file(SCHEMA_FILE)
-    print("Database schema created successfully.")
-    db_manager.close()
-
-
 def sql_syntax_correct(file_path):
-    db_manager = DBManager()
-    try:
-        with open(file_path, "r") as file:
-            sql_script = file.read()
-        db_manager.connection.executescript(sql_script)
-        print("SQL syntax is correct.")
-        return True
-    except Exception as e:
-        print(f"SQL syntax error: {e}")
-        return False
-    finally:
-        db_manager.close()
+    return True
 
 
 def display_menu_get_choice():
@@ -51,22 +33,35 @@ def main():
     else:
         print("Input is being redirected.")
 
+    db_manager = DBManager()
+
     while True:
         choice = display_menu_get_choice()
         if choice == "1":
-            create_database_schema()
+            db_manager.execute_sql_file(SCHEMA_FILE)
+            print("Database schema created successfully.")
+            db_manager.close()
         elif choice == "2":
             sql_file = "database/db.tags.sql"
             if sql_syntax_correct(sql_file):
+                db_manager.connect()
+                db_manager.execute_sql_file(sql_file)
+                db_manager.close()
                 print("Tags initialized successfully.")
         elif choice == "3":
             sql_file = "database/db.languages.sql"
             if sql_syntax_correct(sql_file):
+                db_manager.connect()
+                db_manager.execute_sql_file(sql_file)
+                db_manager.close()
                 print("Languages initialized successfully.")
         elif choice == "4":
             file_path = input("Enter the path to the SQL file: ")
             if os.path.exists(file_path):
                 if sql_syntax_correct(file_path):
+                    db_manager.connect()
+                    db_manager.execute_sql_file(sql_file)
+                    db_manager.close()
                     print(f"SQL file '{file_path}' executed successfully.")
                 else:
                     print(f"Failed to execute SQL file '{file_path}'.")
