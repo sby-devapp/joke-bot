@@ -1,27 +1,11 @@
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    ConversationHandler,
-    filters,
-    MessageHandler,
-)
+from telegram.ext import ApplicationBuilder
+
 from app.controllers.adding_jokes import AddingJokes
 from app.controllers.chat_controller import ChatController
 from app.controllers.controller import Controller
 from app.controllers.setting_controller import SettingController
 from app.controllers.user_controller import UserController
 from bot_token import BOT_TOKEN
-import asyncio
-import logging
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(name)s - %(funcName)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],  # Logs will be printed to the console
-)
-logger = logging.getLogger(__name__)
 
 
 # Initialize the bot application
@@ -29,7 +13,6 @@ application = ApplicationBuilder().token(BOT_TOKEN).build()
 
 # Initialize controllers
 controller = Controller()
-controller.application = application
 chat_controller = ChatController()
 setting_controller = SettingController()
 adding_jokes = AddingJokes()
@@ -53,5 +36,5 @@ setting_controller.setup_handler()
 
 
 if __name__ == "__main__":
-    logger.info("Starting the bot...")
+    print("Starting the bot...")
     application.run_polling()

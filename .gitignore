@@ -36,4 +36,4 @@ test*
 database.db
 *.sqlite
 generate_tokens.py
-TOKEN
+TOKEN/*
