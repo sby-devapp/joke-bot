@@ -4,8 +4,16 @@ from app.controllers.adding_jokes import AddingJokes
 from app.controllers.chat_controller import ChatController
 from app.controllers.controller import Controller
 from app.controllers.setting_controller import SettingController
-from app.controllers.user_controller import UserController
 from bot_token import BOT_TOKEN
+
+import logging
+
+# Suppress httpx info logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+# Suppress apscheduler info logs
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
+# Suppress telegram.ext info logs (optional)
+logging.getLogger("telegram.ext").setLevel(logging.WARNING)
 
 
 # Initialize the bot application
@@ -36,5 +44,5 @@ setting_controller.setup_handler()
 
 
 if __name__ == "__main__":
-    print("Starting the bot...")
+    print("Starting the bot ...")
     application.run_polling()
