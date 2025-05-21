@@ -124,30 +124,20 @@ class DBManager:
         return cursor.fetchone()
 
     def execute_sql_file(self, file_path):
-        """
-        Execute SQL queries from a file.
-        This method supports executing multiple SQL statements separated by semicolons.
-        """
-        if self.connection is None:
-            self.connect()
-
+        cursor = None
         try:
-            # Open the SQL file and read its content
-            with open(file_path, "r") as file:
-                sql_script = file.read()
-
-            # Use a cursor to execute the script
+            with open(file_path, "r", encoding="utf-8") as f:
+                sql = f.read()
+            self.connect()
             cursor = self.connection.cursor()
-            cursor.executescript(sql_script)  # Executes multiple SQL statements
-            self.connection.commit()  # Commit the transaction
-
-            # logger.info(f"Executed SQL script from {file_path}")
-        except sqlite3.Error as e:
-            # logger.error(f"Failed to execute SQL file: {e}")
-            self.connection.rollback()  # Rollback in case of an error
-            raise
+            cursor.executescript(sql)
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error executing SQL file '{file_path}': {e}")
         finally:
-            cursor.close()  # Ensure the cursor is closed
+            if cursor is not None:
+                cursor.close()  # Ensure the cursor is closed only if it was created
+            self.close()
 
     def export(self, sql_file_path):
         """

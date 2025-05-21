@@ -60,7 +60,7 @@ def main():
             if os.path.exists(file_path):
                 if sql_syntax_correct(file_path):
                     db_manager.connect()
-                    db_manager.execute_sql_file(sql_file)
+                    db_manager.execute_sql_file(file_path)  # <-- FIXED HERE
                     db_manager.close()
                     print(f"SQL file '{file_path}' executed successfully.")
                 else:
