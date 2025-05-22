@@ -35,25 +35,28 @@ class AddingJokes(Controller):
     def __init__(self):
         print("Initializing AddingJokes...")
 
+    def init_joke(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user = self.get_user(update, context)
+        joke = Joke()
+        joke.content = "*"
+        joke.language_code = "en"
+        joke.status = "draft"
+        joke.tags = []
+        joke.add_by = user.id
+        joke.load_language()
+        context.user_data["joke"] = joke
+
+        return joke
+
     def get_joke(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> Joke:
-        if "joke" not in context.user_data:
-            user = self.get_user(update, context)
+        if "selected_tags" not in context.user_data:
             context.user_data["selected_tags"] = []
+        if "language_code" not in context.user_data:
             context.user_data["language_code"] = "en"
-            context.user_data["joke"] = Joke()
-            context.user_data["joke"].add_by = user.id
-            context.user_data["joke"].status = "draft"
-            context.user_data["joke"].content = "*"
-            context.user_data["joke"].language_code = context.user_data["language_code"]
-            context.user_data["joke"].tags = context.user_data["selected_tags"]
+        if "joke" not in context.user_data:
+            self.init_joke(update, context)
         elif context.user_data["joke"] == None:
-            user = self.get_user(update, context)
-            context.user_data["joke"] = Joke()
-            context.user_data["joke"].add_by = user.id
-            context.user_data["joke"].status = "draft"
-            context.user_data["joke"].content = "*"
-            context.user_data["joke"].language_code = context.user_data["language_code"]
-            context.user_data["joke"].tags = context.user_data["selected_tags"]
+            self.init_joke(update, context)
 
         return context.user_data["joke"]
 
@@ -66,7 +69,7 @@ class AddingJokes(Controller):
 
         text = f"{status_line}\n{BREAK_LINE}"
         text += f"{joke.content}\n{BREAK_LINE}"
-        text += f"Language: {joke.language_code or 'Not set'}\n"
+        text += f"Language: {joke.language.name or 'Not set'}\n"
         tag_names = (
             ", ".join([f"#{tag.name}" for tag in joke.tags]) if joke.tags else "None"
         )
@@ -334,7 +337,9 @@ class AddingJokes(Controller):
         data = query.data
         lang_code = data.split("_")[2]
         context.user_data["language_code"] = lang_code
-        self.get_joke(update, context).language_code = lang_code
+        joke = self.get_joke(update, context)
+        joke.language_code = lang_code
+        joke.load_language()
         await query.answer(f"✅ Language set to `{lang_code}`")
         await self.update_temp_joke(update, context)
         return ADDING_JOKE
@@ -443,6 +448,12 @@ class AddingJokes(Controller):
             return await self.display_joke(update, context)
         elif data == "toggle_status":
             return await self.toggle_status(update, context)
+        elif data == "jokes_pending":
+            where = ' status ="pending"'
+            return self.my_jokes(update, context, where)
+        elif data == "jokes_published":
+            where = ' status ="published"'
+            return self.my_jokes(update, context, where)
         elif data.startswith("close"):
             try:
                 message_id = int(data.split("_")[1])
@@ -460,30 +471,55 @@ class AddingJokes(Controller):
             await query.edit_message_text("⚠ Unknown action. Returning to main menu.")
             return await self.back_to_menu(update, context)
 
-    async def my_jokes(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def my_jokes(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, where=None
+    ):
         if not await self.check_is_private_chat(update, context):
             return
         user = self.get_user(update, context)
-        my_jokes = user.my_jokes()
-        jokes_menu = []
+        my_jokes = user.my_jokes(where)
+
+        jokes_menu = [
+            [
+                InlineKeyboardButton("Published", callback_data="jokes_published"),
+                InlineKeyboardButton("Pending", callback_data="jokes_pending"),
+            ]
+        ]
         for joke in my_jokes:
             jokes_menu.append(
                 [
                     InlineKeyboardButton(
-                        f"{joke.content[:50]}...",  # Simplified slicing
+                        f"{joke.content[:50]}...",
                         callback_data=f"joke_display_{joke.id}",
                     )
                 ]
             )
 
-        if not jokes_menu:
-            await update.message.reply_text(
-                "You have no jokes yet. Add one using /addjoke."
-            )
-            return
-
         menu = InlineKeyboardMarkup(jokes_menu)
-        await update.message.reply_text(text="Here are your jokes:", reply_markup=menu)
+
+        # If called from a callback query, edit the message; else, send a new one
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            if len(my_jokes) == 0:
+                await query.edit_message_text(
+                    "You have no jokes in this category. Add one using /addjoke.",
+                    reply_markup=menu,
+                )
+            else:
+                await query.edit_message_text(
+                    text="Here are your jokes:", reply_markup=menu
+                )
+        else:
+            if len(my_jokes) == 0:
+                await update.message.reply_text(
+                    "You have no jokes yet. Add one using /addjoke.",
+                    reply_markup=menu,
+                )
+            else:
+                await update.message.reply_text(
+                    text="Here are your jokes:", reply_markup=menu
+                )
 
     def setup_handler(self):
         conv_handler = ConversationHandler(

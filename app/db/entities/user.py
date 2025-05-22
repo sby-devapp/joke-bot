@@ -179,13 +179,16 @@ class User:
             )
             raise
 
-    def my_jokes(self) -> List[Joke]:
+    def my_jokes(self, where=None) -> List[Joke]:
 
         query = """
         SELECT *
         FROM jokes
         WHERE add_by = ?
         """
+        if where != None:
+            query = query + where
+
         jokes = []
         try:
             results = self.db.fetch_all(query, (self.id,))

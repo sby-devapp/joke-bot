@@ -6,8 +6,10 @@ from app.controllers.controller import Controller
 from app.controllers.setting_controller import SettingController
 from bot_token import BOT_TOKEN
 
+# Set logging to WARNING to hide info logs globally
 import logging
 
+logging.basicConfig(level=logging.WARNING)
 # Suppress httpx info logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
 # Suppress apscheduler info logs
