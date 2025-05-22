@@ -44,5 +44,5 @@ setting_controller.setup_handler()
 
 
 if __name__ == "__main__":
-    print("Starting the bot ...")
+    print("The bot is starting ...")
     application.run_polling()
