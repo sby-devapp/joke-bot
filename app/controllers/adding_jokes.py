@@ -351,7 +351,7 @@ class AddingJokes(Controller):
 
         query = update.callback_query
         await query.edit_message_text(
-            text=f"Joke was successfully deleted! If you want to add a new joke, click /add_joke."
+            text=f"Joke was successfully deleted! If you want to add a new joke, click /addjoke."
         )
         # context.user_data.clear()
         context.user_data["joke"] = None
@@ -478,7 +478,7 @@ class AddingJokes(Controller):
 
         if not jokes_menu:
             await update.message.reply_text(
-                "You have no jokes yet. Add one using /add_joke."
+                "You have no jokes yet. Add one using /addjoke."
             )
             return
 
