@@ -209,6 +209,9 @@ class AddingJokes(Controller):
             joke = Joke(id=int(joke_id))
             joke.get()
             joke.load_tags()
+            context.user_data["selected_tags"] = joke.tags
+            context.user_data["language_code"] = joke.language_code
+            context.user_data["joke"] = joke
         else:
             joke = self.get_joke(update, context)
 
