@@ -492,10 +492,11 @@ class AddingJokes(Controller):
             ]
         ]
         for joke in my_jokes:
+            status_icon = "✅" if joke.status == "published" else "⏳"
             jokes_menu.append(
                 [
                     InlineKeyboardButton(
-                        f"ID:{joke.id} | {joke.content[:50]}...",
+                        f"{status_icon} ID:{joke.id} | {joke.content[:50]}...",
                         callback_data=f"joke_display_{joke.id}",
                     )
                 ]
