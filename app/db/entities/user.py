@@ -185,6 +185,9 @@ class User:
         SELECT *
         FROM jokes
         WHERE add_by = ?
+        ORDER BY 
+            CASE WHEN status = 'pending' THEN 0 ELSE 1 END,
+            created_at DESC
         """
         if where != None:
             query = query + where

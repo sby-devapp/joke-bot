@@ -489,7 +489,7 @@ class AddingJokes(Controller):
             jokes_menu.append(
                 [
                     InlineKeyboardButton(
-                        f"{joke.content[:50]}...",
+                        f"ID:{joke.id} | {joke.content[:50]}...",
                         callback_data=f"joke_display_{joke.id}",
                     )
                 ]
